@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIVault</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'wasm-unsafe-eval'; object-src 'self'">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>AIVault</h1>
+      <div class="theme-toggle">
+        <input type="checkbox" id="darkModeToggle">
+        <label for="darkModeToggle">Dark Mode</label>
+      </div>
+    </header>
+
+    <!-- Login Screen (Initial View) -->
+    <div id="loginScreen" class="screen">
+      <div class="form-group">
+        <label for="masterPassword">Master Password</label>
+        <input type="password" id="masterPassword" placeholder="Enter your master password">
+      </div>
+      <button id="unlockBtn" class="btn primary">Unlock Vault</button>
+      <p id="loginMessage" class="message"></p>
+      <p class="create-account">First time? <a href="#" id="setupAccountLink">Create master password</a></p>
+    </div>
+
+    <!-- Setup Account Screen (First time) -->
+    <div id="setupAccountScreen" class="screen hidden">
+      <div class="form-group">
+        <label for="newMasterPassword">Create Master Password</label>
+        <input type="password" id="newMasterPassword" placeholder="Create a strong master password">
+      </div>
+      <div class="form-group">
+        <label for="confirmMasterPassword">Confirm Master Password</label>
+        <input type="password" id="confirmMasterPassword" placeholder="Confirm your master password">
+      </div>
+      <button id="createAccountBtn" class="btn primary">Create Vault</button>
+      <p id="setupMessage" class="message"></p>
+      <p class="create-account">Already have an account? <a href="#" id="backToLoginLink">Log in</a></p>
+    </div>
+
+    <!-- Main Vault Screen -->
+    <div id="vaultScreen" class="screen hidden">
+      <div class="tabs">
+        <button id="passwordsTabBtn" class="tab-btn active">Passwords</button>
+        <button id="aiAssistantTabBtn" class="tab-btn">AI Assistant</button>
+        <button id="totpTabBtn" class="tab-btn">2FA Codes</button>
+        <button id="settingsTabBtn" class="tab-btn">Settings</button>
+      </div>
+
+      <!-- Passwords Tab -->
+      <div id="passwordsTab" class="tab-content">
+        <div class="search-bar">
+          <input type="text" id="searchPasswords" placeholder="Search passwords...">
+        </div>
+        <button id="addPasswordBtn" class="btn primary">Add Password</button>
+        <!-- Password expiry notifications -->
+        <div id="expiryNotifications" class="expiry-notifications hidden">
+          <h3>Password Expiry Warnings</h3>
+          <div id="expiryList" class="expiry-list"></div>
+        </div>
+        <div id="passwordsList" class="list-container">
+          <!-- Password items will be added here dynamically -->
+        </div>
+      </div>
+
+      <!-- AI Assistant Tab -->
+      <div id="aiAssistantTab" class="tab-content hidden">
+        <div class="ai-container">
+          <div id="aiChat" class="ai-chat">
+            <!-- Chat messages will be added here dynamically -->
+            <div class="ai-message">
+              <p>Hello! I'm your AI assistant. How can I help you with password management today?</p>
+            </div>
+          </div>
+          <div class="ai-input">
+            <input type="text" id="aiPrompt" placeholder="Ask a question about password security...">
+            <button id="aiSendBtn" class="btn">Send</button>
+          </div>
+          <div class="quick-actions">
+            <button class="quick-action-btn" data-prompt="Generate a strong password">Generate password</button>
+            <button class="quick-action-btn" data-prompt="What is a strong password?">Password tips</button>
+            <button class="quick-action-btn" data-prompt="How do I set up 2FA?">2FA help</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2FA Codes Tab -->
+      <div id="totpTab" class="tab-content hidden">
+        <button id="addTOTPBtn" class="btn primary">Add 2FA Account</button>
+        <div id="totpList" class="list-container">
+          <!-- TOTP items will be added here dynamically -->
+        </div>
+      </div>
+
+      <!-- Settings Tab -->
+      <div id="settingsTab" class="tab-content hidden">
+        <h3>General Settings</h3>
+        <div class="settings-group">
+          <div class="setting-item">
+            <label for="passwordExpiryDays">Password Expiry Days</label>
+            <input type="number" id="passwordExpiryDays" min="30" max="365" value="90">
+          </div>
+          <div class="setting-item">
+            <input type="checkbox" id="enableAutoFill" checked>
+            <label for="enableAutoFill">Enable Auto-fill</label>
+          </div>
+          <div class="setting-item">
+            <input type="checkbox" id="checkPasswordStrength" checked>
+            <label for="checkPasswordStrength">Check Password Strength</label>
+          </div>
+        </div>
+
+        <h3>Advanced</h3>
+        <div class="settings-group">
+          <div class="setting-item">
+            <input type="checkbox" id="enableTOTP">
+            <label for="enableTOTP">Enable 2FA Functionality</label>
+          </div>
+          <div class="setting-item">
+            <input type="checkbox" id="cloudSync">
+            <label for="cloudSync">Enable Cloud Sync (Experimental)</label>
+          </div>
+        </div>
+
+        <div class="button-group">
+          <button id="exportDataBtn" class="btn secondary">Export Vault Data</button>
+          <button id="importDataBtn" class="btn secondary">Import Vault Data</button>
+          <button id="resetVaultBtn" class="btn danger">Reset Vault</button>
+        </div>
+
+        <div class="version-info">
+          <p>AIVault v1.0.0</p>
+        </div>
+      </div>
+
+      <button id="logoutBtn" class="btn secondary">Lock Vault</button>
+    </div>
+
+    <!-- Add/Edit Password Modal -->
+    <div id="passwordModal" class="modal hidden">
+      <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h2 id="modalTitle">Add Password</h2>
+        <div class="form-group">
+          <label for="websiteInput">Website</label>
+          <input type="text" id="websiteInput" placeholder="example.com">
+        </div>
+        <div class="form-group">
+          <label for="usernameInput">Username/Email</label>
+          <input type="text" id="usernameInput" placeholder="username@example.com">
+        </div>
+        <div class="form-group password-field">
+          <label for="passwordInput">Password</label>
+          <input type="password" id="passwordInput" placeholder="Enter password">
+          <button id="togglePasswordBtn" class="toggle-password">Show</button>
+        </div>
+        <div class="password-generator">
+          <button id="generatePasswordBtn" class="btn secondary">Generate Password</button>
+          <div class="generator-options hidden">
+            <div class="form-group">
+              <label for="passwordLength">Length</label>
+              <input type="number" id="passwordLength" min="8" max="32" value="16">
+            </div>
+            <div class="checkbox-group">
+              <input type="checkbox" id="includeUppercase" checked>
+              <label for="includeUppercase">A-Z</label>
+              
+              <input type="checkbox" id="includeLowercase" checked>
+              <label for="includeLowercase">a-z</label>
+              
+              <input type="checkbox" id="includeNumbers" checked>
+              <label for="includeNumbers">0-9</label>
+              
+              <input type="checkbox" id="includeSymbols" checked>
+              <label for="includeSymbols">!@#$%</label>
+            </div>
+            <button id="applyGenerateBtn" class="btn primary">Apply</button>
+          </div>
+        </div>
+        <div class="password-strength">
+          <div class="strength-label">Password Strength:</div>
+          <div id="strengthMeter" class="strength-meter">
+            <div id="strengthBar" class="strength-bar"></div>
+          </div>
+          <div id="strengthText">None</div>
+        </div>
+        <div class="totp-option">
+          <input type="checkbox" id="setupTOTP">
+          <label for="setupTOTP">Set up 2FA for this account</label>
+        </div>
+        <div class="password-actions">
+          <button id="savePasswordBtn" class="btn primary">Save</button>
+          <button id="sharePasswordBtn" class="btn secondary">Share Password</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add TOTP Modal -->
+    <div id="totpModal" class="modal hidden">
+      <div class="modal-content">
+        <span class="close-totp-modal">&times;</span>
+        <h2>Add 2FA Account</h2>
+        <div class="totp-setup-tabs">
+          <button class="totp-tab-btn active" data-tab="scan">Scan QR Code</button>
+          <button class="totp-tab-btn" data-tab="manual">Enter Manually</button>
+        </div>
+        <div class="totp-tab-content" id="scanTab">
+          <p>Scan the QR code provided by the website or application:</p>
+          <div class="qr-scanner-container">
+            <div id="qrScanner" class="qr-scanner">
+              <!-- QR scanner will be initialized here -->
+            </div>
+          </div>
+        </div>
+        <div class="totp-tab-content hidden" id="manualTab">
+          <div class="form-group">
+            <label for="totpAccount">Account Name</label>
+            <input type="text" id="totpAccount" placeholder="Google, Facebook, etc.">
+          </div>
+          <div class="form-group">
+            <label for="totpSecret">Secret Key</label>
+            <input type="text" id="totpSecret" placeholder="JBSWY3DPEHPK3PXP">
+          </div>
+        </div>
+        <button id="saveTOTPBtn" class="btn primary">Save 2FA Account</button>
+      </div>
+    </div>
+
+    <!-- Share Password Modal -->
+    <div id="shareModal" class="modal hidden">
+      <div class="modal-content">
+        <span class="close-share-modal">&times;</span>
+        <h2>Share Password</h2>
+        <div class="form-group">
+          <label>Share Method</label>
+          <div class="share-method-tabs">
+            <button class="share-tab-btn active" data-tab="link">Share Link</button>
+            <button class="share-tab-btn" data-tab="qr">QR Code</button>
+          </div>
+        </div>
+        <div class="share-tab-content" id="linkTab">
+          <div class="form-group">
+            <label for="shareExpiry">Expires After</label>
+            <select id="shareExpiry">
+              <option value="1">1 day</option>
+              <option value="3">3 days</option>
+              <option value="7" selected>7 days</option>
+              <option value="30">30 days</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="shareRecipient">Recipient Email (Optional)</label>
+            <input type="email" id="shareRecipient" placeholder="recipient@example.com">
+          </div>
+          <div class="generated-link-container hidden">
+            <label>Share Link</label>
+            <div class="share-link-field">
+              <input type="text" id="generatedShareLink" readonly>
+              <button id="copyShareLinkBtn" class="btn secondary">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="share-tab-content hidden" id="qrTab">
+          <div id="shareQRCode" class="qr-code-container">
+            <!-- QR code will be shown here -->
+          </div>
+        </div>
+        <div class="button-group">
+          <button id="generateShareBtn" class="btn primary">Generate Share</button>
+          <button id="cancelShareBtn" class="btn secondary">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Import Password Modal -->
+    <div id="importModal" class="modal hidden">
+      <div class="modal-content">
+        <span class="close-import-modal">&times;</span>
+        <h2>Import From Share</h2>
+        <div class="form-group">
+          <label for="importShareURL">Share Link or QR Code</label>
+          <input type="text" id="importShareURL" placeholder="Paste share link here">
+        </div>
+        <div class="form-group">
+          <label for="importShareKey">Decryption Key</label>
+          <input type="text" id="importShareKey" placeholder="Paste decryption key here">
+        </div>
+        <button id="importShareBtn" class="btn primary">Import Password</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Libraries -->
+  <script src="/lib/cryptojs-aes.min.js"></script>
+  <script src="/lib/jssha.js" onerror="console.error('Failed to load jssha.js library')"></script>
+  <script src="/lib/web-llm.js" onerror="console.error('Failed to load web-llm.js library')"></script>
+  
+  <!-- Application Scripts -->
+  <script src="js/encryption.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/passwordGenerator.js"></script>
+  <script src="js/passwordSharing.js"></script>
+  <script src="js/totp.js"></script>
+  <script src="js/aiAssistant.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/popup-init.js"></script>
+</body>
+</html>
